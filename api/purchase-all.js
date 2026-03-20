@@ -1,42 +1,76 @@
 export default async function handler(req, res) {
     try {
-        if (req.method !== "POST") {
-            return res.status(405).send("Only POST allowed");
-        }
+        const { discordId, email } = req.body;
 
-        const { discordId } = req.body;
-
-        if (!discordId) {
-            return res.status(400).send("Missing Discord ID");
+        if (!discordId || !email) {
+            return res.status(400).send("Missing data");
         }
 
         //----------------------------------
-        // SIMPLE TEST: give ONE role
+        // 🔥 YOUR PRODUCT → ROLE MAP
         //----------------------------------
 
-        const roleId = "1301273196267442260";
+        const roleMap = {
+            "59": "1301273196267442260",
+            "88": "1484113519833120849",
+            "89": "1445199206456229929",
+            "90": "1300087659670274079",
+            "117": "1483125343182393465"
+        };
+
+        //----------------------------------
+        // 🔥 GET ORDERS FROM WOOCOMMERCE
+        //----------------------------------
 
         const response = await fetch(
-            `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}/roles/${roleId}`,
+            `https://www.bergaasdesign.no/wp-json/wc/v3/orders?customer_email=${email}`,
             {
-                method: "PUT",
                 headers: {
-                    Authorization: `Bot ${process.env.BOT_TOKEN}`
+                    Authorization: "Basic " + Buffer.from(
+                        process.env.WC_KEY + ":" + process.env.WC_SECRET
+                    ).toString("base64")
                 }
             }
         );
 
-        const text = await response.text();
-        console.log("Discord response:", text);
+        const orders = await response.json();
 
-        if (!response.ok) {
-            return res.status(500).send("Discord API failed");
+        //----------------------------------
+        // 🔥 COLLECT PRODUCT IDS
+        //----------------------------------
+
+        const purchasedProducts = new Set();
+
+        for (const order of orders) {
+            for (const item of order.line_items) {
+                purchasedProducts.add(String(item.product_id));
+            }
         }
 
-        return res.status(200).send("Role assigned");
+        //----------------------------------
+        // 🔥 GIVE ROLES
+        //----------------------------------
+
+        for (const productId of purchasedProducts) {
+            const roleId = roleMap[productId];
+
+            if (!roleId) continue;
+
+            await fetch(
+                `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}/roles/${roleId}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        Authorization: `Bot ${process.env.BOT_TOKEN}`
+                    }
+                }
+            );
+        }
+
+        return res.status(200).send("Roles assigned");
 
     } catch (err) {
-        console.error("CRASH:", err);
-        return res.status(500).send("Server crash");
+        console.error(err);
+        return res.status(500).send("Server error");
     }
 }
