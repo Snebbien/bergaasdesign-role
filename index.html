@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Verify with Discord</title>
+
+<style>
+
+body{
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:#0f172a;
+font-family:Segoe UI;
+margin:0;
+}
+
+.card{
+background:#111827;
+padding:60px;
+border-radius:12px;
+text-align:center;
+box-shadow:0 0 60px rgba(0,0,0,.6);
+}
+
+button{
+padding:18px 40px;
+font-size:20px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+background:#5865F2;
+color:white;
+font-weight:600;
+transition:.2s;
+}
+
+button:hover{
+transform:scale(1.05);
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h1 style="color:white;">Server Verification</h1>
+
+<br>
+
+<a href="https://discord.com/oauth2/authorize?client_id=1471313859238432979&response_type=code&redirect_uri=https%3A%2F%2Fdiscord-role-sync-ufhf.vercel.app%2Fapi%2Fcallback&scope=identify+guilds">
+
+<button>
+Login with Discord
+</button>
+
+</a>
+
+</div>
+
+</body>
+</html>
+
+// redeploy
