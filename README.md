@@ -1,1 +1,1 @@
-# bergaasdesign-role
+# discord-role-sync
