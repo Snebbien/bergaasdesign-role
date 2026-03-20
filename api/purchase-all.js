@@ -4,10 +4,14 @@ export default async function handler(req, res) {
             return res.status(405).send("Only POST allowed");
         }
 
-        let { discordId, productIds, accessToken } = req.body || {};
+        const { discordId, accessToken, email } = req.body || {};
 
         if (!discordId) {
             return res.status(400).send("Missing Discord ID");
+        }
+
+        if (!email) {
+            return res.status(400).send("Missing email (needed to verify purchases)");
         }
 
         //----------------------------------
@@ -23,19 +27,43 @@ export default async function handler(req, res) {
         };
 
         //----------------------------------
-        // FIX PRODUCT IDS
+        // 1. FETCH ORDERS FROM WOOCOMMERCE
         //----------------------------------
 
-        if (!productIds || productIds.length === 0) {
-            console.log("No products passed — assigning default role");
-            productIds = ["59"]; // fallback
+        const wcRes = await fetch(
+            `https://yourstore.com/wp-json/wc/v3/orders?customer_email=${email}`,
+            {
+                headers: {
+                    Authorization:
+                        "Basic " +
+                        Buffer.from(
+                            process.env.WC_KEY + ":" + process.env.WC_SECRET
+                        ).toString("base64")
+                }
+            }
+        );
+
+        const orders = await wcRes.json();
+
+        console.log("ORDERS:", orders.length);
+
+        //----------------------------------
+        // 2. EXTRACT PRODUCT IDS
+        //----------------------------------
+
+        const productIds = [];
+
+        for (const order of orders) {
+            for (const item of order.line_items) {
+                productIds.push(String(item.product_id));
+            }
         }
 
         //----------------------------------
-        // ADD USER TO SERVER
+        // 3. JOIN SERVER
         //----------------------------------
 
-        const joinRes = await fetch(
+        await fetch(
             `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}`,
             {
                 method: "PUT",
@@ -49,22 +77,15 @@ export default async function handler(req, res) {
             }
         );
 
-        const joinText = await joinRes.text();
-        console.log("JOIN:", joinRes.status, joinText);
-
         //----------------------------------
-        // ASSIGN MULTIPLE ROLES
+        // 4. ASSIGN ROLES (ONLY VALID ONES)
         //----------------------------------
 
         for (const productId of productIds) {
-            const roleId = roleMap[String(productId)];
+            const roleId = roleMap[productId];
+            if (!roleId) continue;
 
-            if (!roleId) {
-                console.log("Skipping unknown product:", productId);
-                continue;
-            }
-
-            const roleRes = await fetch(
+            await fetch(
                 `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}/roles/${roleId}`,
                 {
                     method: "PUT",
@@ -73,26 +94,12 @@ export default async function handler(req, res) {
                     }
                 }
             );
-
-            const roleText = await roleRes.text();
-
-            console.log(`ROLE ${productId}:`, roleRes.status, roleText);
-
-            if (!roleRes.ok) {
-                return res.status(500).send(
-                    `Failed role for product ${productId}\n${roleRes.status}\n${roleText}`
-                );
-            }
         }
 
-        //----------------------------------
-        // SUCCESS
-        //----------------------------------
-
-        return res.status(200).send("ALL ROLES ASSIGNED");
+        return res.status(200).send("SECURE ROLE SYNC COMPLETE");
 
     } catch (err) {
-        console.error("CRASH:", err);
-        return res.status(500).send("SERVER CRASH:\n" + err.message);
+        console.error(err);
+        return res.status(500).send(err.message);
     }
 }
