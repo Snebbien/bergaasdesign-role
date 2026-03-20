@@ -1,6 +1,8 @@
 export default async function handler(req, res) {
     const url = new URL(req.url, `https://${req.headers.host}`);
+
     const code = url.searchParams.get("code");
+    const productId = url.searchParams.get("product_id"); // ✅ NEW
 
     if (!code) {
         return res.status(400).send("No code provided");
@@ -33,7 +35,7 @@ export default async function handler(req, res) {
         const tokenData = await tokenResponse.json();
 
         //----------------------------------
-        // Get user info (IMPORTANT)
+        // Get user info
         //----------------------------------
 
         const userResponse = await fetch(
@@ -48,7 +50,7 @@ export default async function handler(req, res) {
         const userData = await userResponse.json();
 
         //----------------------------------
-        // OPTIONAL: check guild
+        // Check if user is in server
         //----------------------------------
 
         const guildResponse = await fetch(
@@ -67,12 +69,12 @@ export default async function handler(req, res) {
         );
 
         //----------------------------------
-        // Redirect with Discord ID
+        // Redirect back with BOTH values
         //----------------------------------
 
         if (inServer) {
             return res.writeHead(302, {
-                Location: `${process.env.SUCCESS_REDIRECT}?discord_id=${userData.id}`
+                Location: `${process.env.SUCCESS_REDIRECT}?discord_id=${userData.id}&product_id=${productId || ""}`
             }).end();
         } else {
             return res.writeHead(302, {
