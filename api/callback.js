@@ -1,15 +1,30 @@
-    export default async function handler(req, res) {
+export default async function handler(req, res) {
     try {
         const url = new URL(req.url, `https://${req.headers.host}`);
         const code = url.searchParams.get("code");
-        const productIds = url.searchParams.getAll("product_id");
 
         if (!code) {
             return res.status(400).send("Missing code");
         }
 
         //----------------------------------
-        // GET TOKEN (SAFE)
+        // GET PRODUCT IDS (FIXED)
+        //----------------------------------
+
+        let productIds = url.searchParams.getAll("product_id");
+
+        // fallback for single product
+        if (!productIds || productIds.length === 0) {
+            const single = url.searchParams.get("product_id");
+            if (single) {
+                productIds = [single];
+            }
+        }
+
+        console.log("PRODUCT IDS:", productIds);
+
+        //----------------------------------
+        // GET TOKEN
         //----------------------------------
 
         const params = new URLSearchParams({
@@ -43,7 +58,7 @@
         }
 
         //----------------------------------
-        // GET USER (SAFE)
+        // GET USER
         //----------------------------------
 
         const userRes = await fetch("https://discord.com/api/users/@me", {
@@ -67,7 +82,7 @@
         }
 
         //----------------------------------
-        // CALL ROLE API (FIXED URL)
+        // CALL ROLE API
         //----------------------------------
 
         const baseUrl = `https://${req.headers.host}`;
@@ -95,7 +110,7 @@
         // SUCCESS
         //----------------------------------
 
-        return res.send("✅ SUCCESS - Role assigned!");
+        return res.send("✅ SUCCESS - Roles assigned!");
 
     } catch (err) {
         console.error("CRASH:", err);
