@@ -22,8 +22,6 @@ export default async function handler(req, res) {
             "117": "1483125343182393465"
         };
 
-        const roleId = roleMap[String(productId)] || "1301273196267442260";
-
         //----------------------------------
         // 1. ADD USER TO SERVER
         //----------------------------------
@@ -46,27 +44,47 @@ export default async function handler(req, res) {
         console.log("JOIN:", joinRes.status, joinText);
 
         //----------------------------------
-        // 2. ASSIGN ROLE
+        // 2. ASSIGN MULTIPLE ROLES
         //----------------------------------
 
-        const roleRes = await fetch(
-            `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}/roles/${roleId}`,
-            {
-                method: "PUT",
-                headers: {
-                    Authorization: `Bot ${process.env.BOT_TOKEN}`
-                }
-            }
-        );
-
-        const roleText = await roleRes.text();
-        console.log("ROLE:", roleRes.status, roleText);
-
-        if (!roleRes.ok) {
-            return res.status(500).send(`Discord role error:\n${roleRes.status}\n${roleText}`);
+        if (!productIds || productIds.length === 0) {
+            return res.status(400).send("No products provided");
         }
 
-        return res.status(200).send("DONE");
+        for (const productId of productIds) {
+            const roleId = roleMap[String(productId)];
+
+            if (!roleId) {
+                console.log("Skipping unknown product:", productId);
+                continue;
+            }
+
+            const roleRes = await fetch(
+                `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}/roles/${roleId}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        Authorization: `Bot ${process.env.BOT_TOKEN}`
+                    }
+                }
+            );
+
+            const roleText = await roleRes.text();
+
+            console.log(`ROLE ${productId}:`, roleRes.status, roleText);
+
+            if (!roleRes.ok) {
+                return res.status(500).send(
+                    `Failed role for product ${productId}\n${roleRes.status}\n${roleText}`
+                );
+            }
+        }
+
+        //----------------------------------
+        // SUCCESS
+        //----------------------------------
+
+        return res.status(200).send("ALL ROLES ASSIGNED");
 
     } catch (err) {
         console.error("CRASH:", err);
