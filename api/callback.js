@@ -9,7 +9,6 @@ export default async function handler(req, res) {
         console.log("Incoming query:", { code, productId });
 
         if (!code) {
-            console.log("Missing code");
             return res.redirect(`${redirectBase}/error`);
         }
 
@@ -65,7 +64,7 @@ export default async function handler(req, res) {
         // CALL ROLE FUNCTION
         //----------------------------------
 
-        const apiUrl = `${req.headers.origin}/api/purchase-all`; // 🔥 safer than BASE_URL
+        const apiUrl = `${req.headers.origin}/api/purchase-all`;
 
         console.log("Calling purchase-all:", {
             apiUrl,
@@ -80,7 +79,8 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 discordId: userData.id,
-                productId: productId || null
+                productId: productId || null,
+                accessToken: tokenData.access_token // 🔥 IMPORTANT
             })
         });
 
@@ -90,10 +90,6 @@ export default async function handler(req, res) {
         if (!roleResponse.ok) {
             return res.redirect(`${redirectBase}/error`);
         }
-
-        //----------------------------------
-        // SUCCESS
-        //----------------------------------
 
         return res.redirect(`${redirectBase}/success`);
 
