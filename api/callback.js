@@ -1,19 +1,20 @@
 export default async function handler(req, res) {
+
     const redirectBase = process.env.SUCCESS_REDIRECT;
 
     try {
         const url = new URL(req.url, `https://${req.headers.host}`);
         const code = url.searchParams.get("code");
-        const productId = url.searchParams.get("product_id"); // 👈 NEW
+        const productId = url.searchParams.get("product_id");
 
-        if (!code || !productId) {
+        if (!code) {
             return res.writeHead(302, {
                 Location: `${redirectBase}/error`
             }).end();
         }
 
         //----------------------------------
-        // GET TOKEN
+        // GET TOKEN FROM DISCORD
         //----------------------------------
 
         const params = new URLSearchParams({
@@ -33,6 +34,7 @@ export default async function handler(req, res) {
         });
 
         if (!tokenResponse.ok) {
+            console.log("TOKEN ERROR");
             return res.writeHead(302, {
                 Location: `${redirectBase}/error`
             }).end();
@@ -41,7 +43,7 @@ export default async function handler(req, res) {
         const tokenData = await tokenResponse.json();
 
         //----------------------------------
-        // GET USER
+        // GET USER DATA
         //----------------------------------
 
         const userResponse = await fetch("https://discord.com/api/users/@me", {
@@ -51,6 +53,7 @@ export default async function handler(req, res) {
         });
 
         if (!userResponse.ok) {
+            console.log("USER ERROR");
             return res.writeHead(302, {
                 Location: `${redirectBase}/error`
             }).end();
@@ -59,10 +62,10 @@ export default async function handler(req, res) {
         const userData = await userResponse.json();
 
         //----------------------------------
-        // CALL ROLE API (FIXED INTERNAL CALL)
+        // CALL ROLE FUNCTION
         //----------------------------------
 
-        const roleResponse = await fetch(`https://${req.headers.host}/api/purchase-all`, {
+        const roleResponse = await fetch(`${process.env.BASE_URL}/api/purchase-all`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -74,8 +77,7 @@ export default async function handler(req, res) {
         });
 
         if (!roleResponse.ok) {
-            console.error(await roleResponse.text());
-
+            console.log("ROLE ERROR");
             return res.writeHead(302, {
                 Location: `${redirectBase}/error`
             }).end();
@@ -90,7 +92,7 @@ export default async function handler(req, res) {
         }).end();
 
     } catch (err) {
-        console.error(err);
+        console.error("CRASH:", err);
 
         return res.writeHead(302, {
             Location: `${redirectBase}/error`
