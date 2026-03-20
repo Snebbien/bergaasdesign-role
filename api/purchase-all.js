@@ -27,13 +27,13 @@ export default async function handler(req, res) {
         };
 
         //----------------------------------
-        // FETCH ORDERS (SAFE)
+        // FETCH ORDERS (FIXED QUERY)
         //----------------------------------
 
         let wcRes;
         try {
             wcRes = await fetch(
-                `https://bergaasdesign.no/wp-json/wc/v3/orders?customer=${email}`,
+                `https://bergaasdesign.no/wp-json/wc/v3/orders?search=${encodeURIComponent(email)}`,
                 {
                     headers: {
                         Authorization:
@@ -114,6 +114,10 @@ export default async function handler(req, res) {
                 }
             );
         }
+
+        //----------------------------------
+        // SUCCESS
+        //----------------------------------
 
         return res.status(200).send("SECURE ROLE SYNC COMPLETE");
 
