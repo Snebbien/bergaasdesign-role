@@ -11,7 +11,7 @@ export default async function handler(req, res) {
         }
 
         if (!email) {
-            return res.status(400).send("Missing email (needed to verify purchases)");
+            return res.status(400).send("Missing email");
         }
 
         //----------------------------------
@@ -27,40 +27,59 @@ export default async function handler(req, res) {
         };
 
         //----------------------------------
-        // 1. FETCH ORDERS FROM WOOCOMMERCE
+        // FETCH ORDERS (SAFE)
         //----------------------------------
 
-        const wcRes = await fetch(
-            `https://yourstore.com/wp-json/wc/v3/orders?customer_email=${email}`,
-            {
-                headers: {
-                    Authorization:
-                        "Basic " +
-                        Buffer.from(
-                            process.env.WC_KEY + ":" + process.env.WC_SECRET
-                        ).toString("base64")
+        let wcRes;
+        try {
+            wcRes = await fetch(
+                `https://bergaasdesign.no/wp-json/wc/v3/orders?customer=${email}`,
+                {
+                    headers: {
+                        Authorization:
+                            "Basic " +
+                            Buffer.from(
+                                process.env.WC_KEY + ":" + process.env.WC_SECRET
+                            ).toString("base64")
+                    }
                 }
-            }
-        );
+            );
+        } catch (err) {
+            return res.status(500).send("WooCommerce fetch crashed:\n" + err.message);
+        }
 
-        const orders = await wcRes.json();
+        const wcText = await wcRes.text();
+        console.log("WC RAW:", wcText);
 
-        console.log("ORDERS:", orders.length);
+        let orders;
+        try {
+            orders = JSON.parse(wcText);
+        } catch {
+            return res.status(500).send("Invalid WooCommerce response:\n" + wcText);
+        }
+
+        if (!wcRes.ok) {
+            return res.status(500).send("WooCommerce error:\n" + wcText);
+        }
 
         //----------------------------------
-        // 2. EXTRACT PRODUCT IDS
+        // EXTRACT PRODUCTS
         //----------------------------------
 
         const productIds = [];
 
         for (const order of orders) {
-            for (const item of order.line_items) {
+            for (const item of order.line_items || []) {
                 productIds.push(String(item.product_id));
             }
         }
 
+        if (productIds.length === 0) {
+            return res.status(400).send("No purchases found for this email");
+        }
+
         //----------------------------------
-        // 3. JOIN SERVER
+        // JOIN SERVER
         //----------------------------------
 
         await fetch(
@@ -78,7 +97,7 @@ export default async function handler(req, res) {
         );
 
         //----------------------------------
-        // 4. ASSIGN ROLES (ONLY VALID ONES)
+        // ASSIGN ROLES
         //----------------------------------
 
         for (const productId of productIds) {
@@ -99,7 +118,7 @@ export default async function handler(req, res) {
         return res.status(200).send("SECURE ROLE SYNC COMPLETE");
 
     } catch (err) {
-        console.error(err);
-        return res.status(500).send(err.message);
+        console.error("CRASH:", err);
+        return res.status(500).send("SERVER CRASH:\n" + err.message);
     }
 }
