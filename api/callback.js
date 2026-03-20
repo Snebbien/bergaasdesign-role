@@ -1,106 +1,58 @@
 export default async function handler(req, res) {
-    const redirectBase = process.env.SUCCESS_REDIRECT;
-
     try {
         const url = new URL(req.url, `https://${req.headers.host}`);
         const code = url.searchParams.get("code");
         const productId = url.searchParams.get("product_id");
 
-        console.log("Incoming query:", { code, productId });
+        if (!code) return res.status(400).send("Missing code");
 
-        if (!code) {
-            return res.redirect(`${redirectBase}/error`);
-        }
-
-        //----------------------------------
-        // GET TOKEN FROM DISCORD
-        //----------------------------------
-
+        // 1. TOKEN
         const params = new URLSearchParams({
             client_id: process.env.CLIENT_ID,
             client_secret: process.env.CLIENT_SECRET,
             grant_type: "authorization_code",
-            code: code,
+            code,
             redirect_uri: process.env.REDIRECT_URI
         });
 
-        const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+        const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
             method: "POST",
             body: params,
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
+            headers: { "Content-Type": "application/x-www-form-urlencoded" }
         });
 
-        const tokenText = await tokenResponse.text();
-        console.log("Token response:", tokenText);
+        const token = await tokenRes.json();
 
-        if (!tokenResponse.ok) {
-            return res.redirect(`${redirectBase}/error`);
-        }
-
-        const tokenData = JSON.parse(tokenText);
-
-        //----------------------------------
-        // GET USER DATA
-        //----------------------------------
-
-        const userResponse = await fetch("https://discord.com/api/users/@me", {
-            headers: {
-                Authorization: `Bearer ${tokenData.access_token}`
-            }
+        // 2. USER
+        const userRes = await fetch("https://discord.com/api/users/@me", {
+            headers: { Authorization: `Bearer ${token.access_token}` }
         });
 
-        const userText = await userResponse.text();
-        console.log("User response:", userText);
+        const user = await userRes.json();
 
-        if (!userResponse.ok) {
-            return res.redirect(`${redirectBase}/error`);
-        }
-
-        const userData = JSON.parse(userText);
-
-        //----------------------------------
-        // CALL ROLE FUNCTION
-        //----------------------------------
-
-        const apiUrl = `${req.headers.origin}/api/purchase-all`;
-
-        const roleResponse = await fetch(apiUrl, {
+        // 3. CALL ROLE API
+        const roleRes = await fetch(`${req.headers.origin}/api/purchase-all`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                discordId: userData.id,
-                productId: productId || null
+                discordId: user.id,
+                productId,
+                accessToken: token.access_token
             })
         });
 
-        const roleText = await roleResponse.text();
-        console.log("Role response:", roleText);
+        const text = await roleRes.text();
 
-        //----------------------------------
-        // HANDLE RESULTS
-        //----------------------------------
-
-        if (!roleResponse.ok) {
-
-            if (roleText.includes("NOT_IN_SERVER")) {
-                return res.redirect(`${redirectBase}/join-server`);
-            }
-
-            if (roleText.includes("NO_PERMISSION")) {
-                return res.redirect(`${redirectBase}/error?reason=permissions`);
-            }
-
-            return res.redirect(`${redirectBase}/error`);
+        if (!roleRes.ok) {
+            return res.status(500).send(text);
         }
 
-        return res.redirect(`${redirectBase}/success`);
+        return res.redirect(`${process.env.SUCCESS_REDIRECT}/success`);
 
     } catch (err) {
-        console.error("CRASH:", err);
-        return res.redirect(`${redirectBase}/error`);
+        console.error(err);
+        return res.status(500).send("Crash");
     }
 }
