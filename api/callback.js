@@ -12,7 +12,7 @@ export default async function handler(req, res) {
         }
 
         //----------------------------------
-        // Exchange code
+        // GET TOKEN
         //----------------------------------
 
         const params = new URLSearchParams({
@@ -32,8 +32,6 @@ export default async function handler(req, res) {
         });
 
         if (!tokenResponse.ok) {
-            console.error("TOKEN ERROR:", await tokenResponse.text());
-
             return res.writeHead(302, {
                 Location: `${redirectBase}/error`
             }).end();
@@ -42,7 +40,7 @@ export default async function handler(req, res) {
         const tokenData = await tokenResponse.json();
 
         //----------------------------------
-        // Get Discord user
+        // GET USER
         //----------------------------------
 
         const userResponse = await fetch("https://discord.com/api/users/@me", {
@@ -52,38 +50,26 @@ export default async function handler(req, res) {
         });
 
         if (!userResponse.ok) {
-            console.error("USER ERROR:", await userResponse.text());
-
             return res.writeHead(302, {
                 Location: `${redirectBase}/error`
             }).end();
         }
 
         const userData = await userResponse.json();
-        const discordId = userData.id;
 
         //----------------------------------
-        // Call purchase API
+        // CALL ROLE API
         //----------------------------------
 
-        const roleResponse = await fetch(
-            `${process.env.BASE_URL}/api/purchase-all`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ discordId })
-            }
-        );
-
-        if (!roleResponse.ok) {
-            console.error("ROLE ERROR:", await roleResponse.text());
-
-            return res.writeHead(302, {
-                Location: `${redirectBase}/error`
-            }).end();
-        }
+        await fetch(`${process.env.BASE_URL}/api/purchase-all`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                discordId: userData.id
+            })
+        });
 
         //----------------------------------
         // SUCCESS
@@ -94,7 +80,7 @@ export default async function handler(req, res) {
         }).end();
 
     } catch (err) {
-        console.error("CRASH:", err);
+        console.error(err);
 
         return res.writeHead(302, {
             Location: `${redirectBase}/error`
