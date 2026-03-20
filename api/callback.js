@@ -65,12 +65,8 @@ export default async function handler(req, res) {
             return res.status(500).send("User fetch failed:\n" + userText);
         }
 
-        //----------------------------------
-        // CHECK EMAIL
-        //----------------------------------
-
         if (!user.email) {
-            return res.status(400).send("No email returned from Discord. Make sure email scope is enabled.");
+            return res.status(400).send("No email from Discord (add email scope)");
         }
 
         //----------------------------------
@@ -97,10 +93,6 @@ export default async function handler(req, res) {
         if (!roleRes.ok) {
             return res.status(500).send("Role error:\n" + roleText);
         }
-
-        //----------------------------------
-        // SUCCESS
-        //----------------------------------
 
         return res.send("✅ SUCCESS - Secure role sync!");
 
