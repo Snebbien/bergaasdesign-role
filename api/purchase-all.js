@@ -6,38 +6,13 @@ export default async function handler(req, res) {
             return res.status(405).send("Only POST allowed");
         }
 
-        const { discordId, productId, accessToken } = req.body || {};
+        const { discordId, productId } = req.body || {};
 
         console.log("BODY:", req.body);
 
         if (!discordId) {
             return res.status(400).send("Missing Discord ID");
         }
-
-        //----------------------------------
-        // ADD USER TO SERVER (CRITICAL FIX)
-        //----------------------------------
-
-        const addUserResponse = await fetch(
-            `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}`,
-            {
-                method: "PUT",
-                headers: {
-                    Authorization: `Bot ${process.env.BOT_TOKEN}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    access_token: accessToken
-                })
-            }
-        );
-
-        const addUserText = await addUserResponse.text();
-
-        console.log("Add user response:", {
-            status: addUserResponse.status,
-            body: addUserText
-        });
 
         //----------------------------------
         // PRODUCT → ROLE MAP
@@ -75,19 +50,31 @@ export default async function handler(req, res) {
 
         const text = await response.text();
 
-        console.log("Discord role response:", {
+        console.log("Discord response:", {
             status: response.status,
             body: text
         });
 
-        if (!response.ok) {
-            return res.status(500).send(`Discord API failed: ${response.status}`);
+        //----------------------------------
+        // ERROR HANDLING (CRITICAL)
+        //----------------------------------
+
+        if (response.status === 404) {
+            return res.status(400).send("NOT_IN_SERVER");
         }
 
-        return res.status(200).send("Role assigned");
+        if (response.status === 403) {
+            return res.status(400).send("NO_PERMISSION");
+        }
+
+        if (!response.ok) {
+            return res.status(500).send("DISCORD_ERROR");
+        }
+
+        return res.status(200).send("ROLE_ASSIGNED");
 
     } catch (err) {
         console.error("CRASH:", err);
-        return res.status(500).send("Server crash");
+        return res.status(500).send("SERVER_ERROR");
     }
 }
