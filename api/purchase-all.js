@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+
     try {
         if (req.method !== "POST") {
             return res.status(405).send("Only POST allowed");
@@ -6,8 +7,8 @@ export default async function handler(req, res) {
 
         const { discordId, productId } = req.body;
 
-        if (!discordId || !productId) {
-            return res.status(400).send("Missing data");
+        if (!discordId) {
+            return res.status(400).send("Missing Discord ID");
         }
 
         //----------------------------------
@@ -22,10 +23,15 @@ export default async function handler(req, res) {
             "117": "1483125343182393465"
         };
 
-        const roleId = roleMap[productId];
+        //----------------------------------
+        // PICK ROLE
+        //----------------------------------
 
+        let roleId = roleMap[productId];
+
+        // fallback (optional)
         if (!roleId) {
-            return res.status(400).send("Invalid product");
+            roleId = "1301273196267442260"; // default role
         }
 
         //----------------------------------
@@ -46,7 +52,7 @@ export default async function handler(req, res) {
         console.log("Discord response:", text);
 
         if (!response.ok) {
-            return res.status(500).send(text);
+            return res.status(500).send("Discord API failed");
         }
 
         return res.status(200).send("Role assigned");
