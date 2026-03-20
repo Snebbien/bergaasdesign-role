@@ -96,6 +96,7 @@ export default async function handler(req, res) {
                 discordId: user.id,
                 productIds,
                 accessToken: token.access_token
+                email: user.email
             })
         });
 
