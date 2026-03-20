@@ -1,11 +1,15 @@
 export default async function handler(req, res) {
-
     try {
+        console.log("METHOD:", req.method);
+
         if (req.method !== "POST") {
             return res.status(405).send("Only POST allowed");
         }
 
-        const { discordId, productId } = req.body;
+        // ✅ Ensure body exists
+        const { discordId, productId } = req.body || {};
+
+        console.log("BODY:", req.body);
 
         if (!discordId) {
             return res.status(400).send("Missing Discord ID");
@@ -27,32 +31,33 @@ export default async function handler(req, res) {
         // PICK ROLE
         //----------------------------------
 
-        let roleId = roleMap[productId];
+        let roleId = roleMap[String(productId)];
 
-        // fallback (optional)
         if (!roleId) {
-            roleId = "1301273196267442260"; // default role
+            console.log("Unknown productId, using fallback:", productId);
+            roleId = "1301273196267442260";
         }
 
         //----------------------------------
         // GIVE ROLE
         //----------------------------------
 
-        const response = await fetch(
-            `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}/roles/${roleId}`,
-            {
-                method: "PUT",
-                headers: {
-                    Authorization: `Bot ${process.env.BOT_TOKEN}`
-                }
+        const discordUrl = `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}/roles/${roleId}`;
+
+        console.log("Calling Discord:", discordUrl);
+
+        const response = await fetch(discordUrl, {
+            method: "PUT",
+            headers: {
+                Authorization: `Bot ${process.env.BOT_TOKEN}`
             }
-        );
+        });
 
         const text = await response.text();
         console.log("Discord response:", text);
 
         if (!response.ok) {
-            return res.status(500).send("Discord API failed");
+            return res.status(500).send(`Discord API failed: ${text}`);
         }
 
         return res.status(200).send("Role assigned");
