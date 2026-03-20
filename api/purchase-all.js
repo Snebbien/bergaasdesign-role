@@ -4,7 +4,7 @@ export default async function handler(req, res) {
             return res.status(405).send("Only POST allowed");
         }
 
-        const { discordId, productId, accessToken } = req.body || {};
+        const { discordId, productIds, accessToken } = req.body || {};
 
         if (!discordId) {
             return res.status(400).send("Missing Discord ID");
