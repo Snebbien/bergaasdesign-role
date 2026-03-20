@@ -1,17 +1,35 @@
 export default async function handler(req, res) {
-    if (req.method !== "POST") {
-        return res.status(405).send("Only POST allowed");
-    }
+    const { discordId } = req.body;
 
-    const { discordId, productId } = req.body;
-
-    if (!discordId || !productId) {
-        return res.status(400).send("Missing data");
+    if (!discordId) {
+        return res.status(400).send("Missing Discord ID");
     }
 
     try {
         //----------------------------------
-        // Map product → role
+        // 🔥 GET USER FROM YOUR DATABASE
+        //----------------------------------
+
+        // ⚠️ YOU MUST STORE THIS YOURSELF
+        // Example:
+        const user = await getUserByDiscordId(discordId);
+
+        if (!user) {
+            return res.status(404).send("User not linked");
+        }
+
+        //----------------------------------
+        // Get WooCommerce orders
+        //----------------------------------
+
+        const wcResponse = await fetch(
+            `${process.env.WC_API_URL}/orders?customer=${user.wp_user_id}&consumer_key=${process.env.WC_KEY}&consumer_secret=${process.env.WC_SECRET}`
+        );
+
+        const orders = await wcResponse.json();
+
+        //----------------------------------
+        // Role map
         //----------------------------------
 
         const roleMap = {
@@ -22,33 +40,29 @@ export default async function handler(req, res) {
             "117": "1483125343182393465"
         };
 
-        const roleId = roleMap[String(productId)]; // ✅ IMPORTANT FIX
-
-        if (!roleId) {
-            return res.status(400).send("Invalid product");
-        }
-
         //----------------------------------
-        // Give role via bot
+        // Assign roles
         //----------------------------------
 
-        const response = await fetch(
-            `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}/roles/${roleId}`,
-            {
-                method: "PUT",
-                headers: {
-                    Authorization: `Bot ${process.env.BOT_TOKEN}`
-                }
+        for (const order of orders) {
+            for (const item of order.line_items) {
+
+                const roleId = roleMap[String(item.product_id)];
+                if (!roleId) continue;
+
+                await fetch(
+                    `https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordId}/roles/${roleId}`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            Authorization: `Bot ${process.env.BOT_TOKEN}`
+                        }
+                    }
+                );
             }
-        );
-
-        if (!response.ok) {
-            const text = await response.text();
-            console.error("DISCORD ERROR:", text);
-            return res.status(500).send("Failed to assign role");
         }
 
-        return res.status(200).send("Role assigned!");
+        return res.status(200).send("Roles updated");
 
     } catch (err) {
         console.error(err);
