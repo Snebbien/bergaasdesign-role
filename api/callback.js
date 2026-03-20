@@ -4,8 +4,9 @@ export default async function handler(req, res) {
     try {
         const url = new URL(req.url, `https://${req.headers.host}`);
         const code = url.searchParams.get("code");
+        const productId = url.searchParams.get("product_id"); // 👈 NEW
 
-        if (!code) {
+        if (!code || !productId) {
             return res.writeHead(302, {
                 Location: `${redirectBase}/error`
             }).end();
@@ -58,18 +59,27 @@ export default async function handler(req, res) {
         const userData = await userResponse.json();
 
         //----------------------------------
-        // CALL ROLE API
+        // CALL ROLE API (FIXED INTERNAL CALL)
         //----------------------------------
 
-        await fetch(`https://${req.headers.host}/api/purchase-all`, {
+        const roleResponse = await fetch(`https://${req.headers.host}/api/purchase-all`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                discordId: userData.id
+                discordId: userData.id,
+                productId: productId
             })
         });
+
+        if (!roleResponse.ok) {
+            console.error(await roleResponse.text());
+
+            return res.writeHead(302, {
+                Location: `${redirectBase}/error`
+            }).end();
+        }
 
         //----------------------------------
         // SUCCESS
