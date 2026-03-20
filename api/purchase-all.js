@@ -4,7 +4,7 @@ export default async function handler(req, res) {
             return res.status(405).send("Only POST allowed");
         }
 
-        const { discordId, productIds, accessToken } = req.body || {};
+        let { discordId, productIds, accessToken } = req.body || {};
 
         if (!discordId) {
             return res.status(400).send("Missing Discord ID");
@@ -23,13 +23,12 @@ export default async function handler(req, res) {
         };
 
         //----------------------------------
-        // VALIDATE PRODUCTS (FIXED)
+        // FIX PRODUCT IDS
         //----------------------------------
 
         if (!productIds || productIds.length === 0) {
             console.log("No products passed — assigning default role");
-
-            productIds = ["59"]; // 👈 default fallback role
+            productIds = ["59"]; // fallback
         }
 
         //----------------------------------
