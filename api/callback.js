@@ -61,7 +61,7 @@ export default async function handler(req, res) {
         // CALL ROLE API
         //----------------------------------
 
-        await fetch(`${process.env.BASE_URL}/api/purchase-all`, {
+        await fetch(`https://${req.headers.host}/api/purchase-all`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
