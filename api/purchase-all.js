@@ -23,7 +23,17 @@ export default async function handler(req, res) {
         };
 
         //----------------------------------
-        // 1. ADD USER TO SERVER
+        // VALIDATE PRODUCTS (FIXED)
+        //----------------------------------
+
+        if (!productIds || productIds.length === 0) {
+            console.log("No products passed — assigning default role");
+
+            productIds = ["59"]; // 👈 default fallback role
+        }
+
+        //----------------------------------
+        // ADD USER TO SERVER
         //----------------------------------
 
         const joinRes = await fetch(
@@ -44,12 +54,8 @@ export default async function handler(req, res) {
         console.log("JOIN:", joinRes.status, joinText);
 
         //----------------------------------
-        // 2. ASSIGN MULTIPLE ROLES
+        // ASSIGN MULTIPLE ROLES
         //----------------------------------
-
-        if (!productIds || productIds.length === 0) {
-            return res.status(400).send("No products provided");
-        }
 
         for (const productId of productIds) {
             const roleId = roleMap[String(productId)];
