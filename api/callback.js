@@ -66,12 +66,6 @@ export default async function handler(req, res) {
 
         const apiUrl = `${req.headers.origin}/api/purchase-all`;
 
-        console.log("Calling purchase-all:", {
-            apiUrl,
-            discordId: userData.id,
-            productId
-        });
-
         const roleResponse = await fetch(apiUrl, {
             method: "POST",
             headers: {
@@ -79,15 +73,27 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 discordId: userData.id,
-                productId: productId || null,
-                accessToken: tokenData.access_token // 🔥 IMPORTANT
+                productId: productId || null
             })
         });
 
         const roleText = await roleResponse.text();
         console.log("Role response:", roleText);
 
+        //----------------------------------
+        // HANDLE RESULTS
+        //----------------------------------
+
         if (!roleResponse.ok) {
+
+            if (roleText.includes("NOT_IN_SERVER")) {
+                return res.redirect(`${redirectBase}/join-server`);
+            }
+
+            if (roleText.includes("NO_PERMISSION")) {
+                return res.redirect(`${redirectBase}/error?reason=permissions`);
+            }
+
             return res.redirect(`${redirectBase}/error`);
         }
 
