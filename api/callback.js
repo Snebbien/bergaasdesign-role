@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-
     const redirectBase = process.env.SUCCESS_REDIRECT;
 
     try {
@@ -7,10 +6,11 @@ export default async function handler(req, res) {
         const code = url.searchParams.get("code");
         const productId = url.searchParams.get("product_id");
 
+        console.log("Incoming query:", { code, productId });
+
         if (!code) {
-            return res.writeHead(302, {
-                Location: `${redirectBase}/error`
-            }).end();
+            console.log("Missing code");
+            return res.redirect(`${redirectBase}/error`);
         }
 
         //----------------------------------
@@ -33,14 +33,14 @@ export default async function handler(req, res) {
             }
         });
 
+        const tokenText = await tokenResponse.text();
+        console.log("Token response:", tokenText);
+
         if (!tokenResponse.ok) {
-            console.log("TOKEN ERROR");
-            return res.writeHead(302, {
-                Location: `${redirectBase}/error`
-            }).end();
+            return res.redirect(`${redirectBase}/error`);
         }
 
-        const tokenData = await tokenResponse.json();
+        const tokenData = JSON.parse(tokenText);
 
         //----------------------------------
         // GET USER DATA
@@ -52,50 +52,53 @@ export default async function handler(req, res) {
             }
         });
 
+        const userText = await userResponse.text();
+        console.log("User response:", userText);
+
         if (!userResponse.ok) {
-            console.log("USER ERROR");
-            return res.writeHead(302, {
-                Location: `${redirectBase}/error`
-            }).end();
+            return res.redirect(`${redirectBase}/error`);
         }
 
-        const userData = await userResponse.json();
+        const userData = JSON.parse(userText);
 
         //----------------------------------
         // CALL ROLE FUNCTION
         //----------------------------------
 
-        const roleResponse = await fetch(`${process.env.BASE_URL}/api/purchase-all`, {
+        const apiUrl = `${req.headers.origin}/api/purchase-all`; // 🔥 safer than BASE_URL
+
+        console.log("Calling purchase-all:", {
+            apiUrl,
+            discordId: userData.id,
+            productId
+        });
+
+        const roleResponse = await fetch(apiUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
                 discordId: userData.id,
-                productId: productId
+                productId: productId || null
             })
         });
 
+        const roleText = await roleResponse.text();
+        console.log("Role response:", roleText);
+
         if (!roleResponse.ok) {
-            console.log("ROLE ERROR");
-            return res.writeHead(302, {
-                Location: `${redirectBase}/error`
-            }).end();
+            return res.redirect(`${redirectBase}/error`);
         }
 
         //----------------------------------
         // SUCCESS
         //----------------------------------
 
-        return res.writeHead(302, {
-            Location: `${redirectBase}/success`
-        }).end();
+        return res.redirect(`${redirectBase}/success`);
 
     } catch (err) {
         console.error("CRASH:", err);
-
-        return res.writeHead(302, {
-            Location: `${redirectBase}/error`
-        }).end();
+        return res.redirect(`${redirectBase}/error`);
     }
 }
