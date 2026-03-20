@@ -1,8 +1,8 @@
-export default async function handler(req, res) {
+    export default async function handler(req, res) {
     try {
         const url = new URL(req.url, `https://${req.headers.host}`);
         const code = url.searchParams.get("code");
-        const productId = url.searchParams.get("product_id");
+        const productIds = url.searchParams.getAll("product_id");
 
         if (!code) {
             return res.status(400).send("Missing code");
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 discordId: user.id,
-                productId,
+                productIds,
                 accessToken: token.access_token
             })
         });
