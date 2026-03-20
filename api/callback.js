@@ -9,7 +9,7 @@ export default async function handler(req, res) {
         }
 
         //----------------------------------
-        // GET TOKEN FROM DISCORD (SAFE)
+        // GET TOKEN (SAFE)
         //----------------------------------
 
         const params = new URLSearchParams({
@@ -29,13 +29,13 @@ export default async function handler(req, res) {
         });
 
         const tokenText = await tokenRes.text();
-        console.log("TOKEN RAW:", tokenText);
+        console.log("TOKEN:", tokenText);
 
         let token;
         try {
             token = JSON.parse(tokenText);
         } catch {
-            return res.status(500).send("Invalid token response:\n" + tokenText);
+            return res.status(500).send("Token parse error:\n" + tokenText);
         }
 
         if (!tokenRes.ok) {
@@ -53,13 +53,13 @@ export default async function handler(req, res) {
         });
 
         const userText = await userRes.text();
-        console.log("USER RAW:", userText);
+        console.log("USER:", userText);
 
         let user;
         try {
             user = JSON.parse(userText);
         } catch {
-            return res.status(500).send("Invalid user response:\n" + userText);
+            return res.status(500).send("User parse error:\n" + userText);
         }
 
         if (!userRes.ok) {
@@ -67,10 +67,12 @@ export default async function handler(req, res) {
         }
 
         //----------------------------------
-        // CALL ROLE API
+        // CALL ROLE API (FIXED URL)
         //----------------------------------
 
-        const roleRes = await fetch(`${req.headers.origin}/api/purchase-all`, {
+        const baseUrl = `https://${req.headers.host}`;
+
+        const roleRes = await fetch(`${baseUrl}/api/purchase-all`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -83,7 +85,7 @@ export default async function handler(req, res) {
         });
 
         const roleText = await roleRes.text();
-        console.log("ROLE RAW:", roleText);
+        console.log("ROLE:", roleText);
 
         if (!roleRes.ok) {
             return res.status(500).send("Role error:\n" + roleText);
