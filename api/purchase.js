@@ -20,10 +20,9 @@ export default async function handler(req, res) {
             "89": "1445199206456229929",
             "90": "1300087659670274079",
             "117": "1483125343182393465"
-            
         };
 
-        const roleId = roleMap[productId];
+        const roleId = roleMap[String(productId)]; // ✅ IMPORTANT FIX
 
         if (!roleId) {
             return res.status(400).send("Invalid product");
@@ -45,7 +44,7 @@ export default async function handler(req, res) {
 
         if (!response.ok) {
             const text = await response.text();
-            console.error(text);
+            console.error("DISCORD ERROR:", text);
             return res.status(500).send("Failed to assign role");
         }
 
