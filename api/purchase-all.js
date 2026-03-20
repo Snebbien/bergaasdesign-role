@@ -4,17 +4,29 @@ export default async function handler(req, res) {
             return res.status(405).send("Only POST allowed");
         }
 
-        const { discordId } = req.body;
+        const { discordId, productId } = req.body;
 
-        if (!discordId) {
-            return res.status(400).send("Missing Discord ID");
+        if (!discordId || !productId) {
+            return res.status(400).send("Missing data");
         }
 
         //----------------------------------
-        // TEST ROLE (CHANGE THIS)
+        // PRODUCT → ROLE MAP
         //----------------------------------
 
-        const roleId = "1301273196267442260";
+        const roleMap = {
+            "59": "1301273196267442260",
+            "88": "1484113519833120849",
+            "89": "1445199206456229929",
+            "90": "1300087659670274079",
+            "117": "1483125343182393465"
+        };
+
+        const roleId = roleMap[productId];
+
+        if (!roleId) {
+            return res.status(400).send("Invalid product");
+        }
 
         //----------------------------------
         // GIVE ROLE
@@ -34,7 +46,7 @@ export default async function handler(req, res) {
         console.log("Discord response:", text);
 
         if (!response.ok) {
-            return res.status(500).send("Discord API failed");
+            return res.status(500).send(text);
         }
 
         return res.status(200).send("Role assigned");
