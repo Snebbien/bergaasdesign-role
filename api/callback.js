@@ -1,12 +1,16 @@
 export default async function handler(req, res) {
-    const url = new URL(req.url, `https://${req.headers.host}`);
-    const code = url.searchParams.get("code");
-
-    if (!code) {
-        return res.status(400).send("No code provided");
-    }
+    const redirectBase = process.env.SUCCESS_REDIRECT;
 
     try {
+        const url = new URL(req.url, `https://${req.headers.host}`);
+        const code = url.searchParams.get("code");
+
+        if (!code) {
+            return res.writeHead(302, {
+                Location: `${redirectBase}/error`
+            }).end();
+        }
+
         //----------------------------------
         // Exchange code
         //----------------------------------
@@ -27,46 +31,73 @@ export default async function handler(req, res) {
             }
         });
 
+        if (!tokenResponse.ok) {
+            console.error("TOKEN ERROR:", await tokenResponse.text());
+
+            return res.writeHead(302, {
+                Location: `${redirectBase}/error`
+            }).end();
+        }
+
         const tokenData = await tokenResponse.json();
 
         //----------------------------------
         // Get Discord user
         //----------------------------------
 
-        const userResponse = await fetch(
-            "https://discord.com/api/users/@me",
-            {
-                headers: {
-                    Authorization: `Bearer ${tokenData.access_token}`
-                }
+        const userResponse = await fetch("https://discord.com/api/users/@me", {
+            headers: {
+                Authorization: `Bearer ${tokenData.access_token}`
             }
-        );
+        });
+
+        if (!userResponse.ok) {
+            console.error("USER ERROR:", await userResponse.text());
+
+            return res.writeHead(302, {
+                Location: `${redirectBase}/error`
+            }).end();
+        }
 
         const userData = await userResponse.json();
         const discordId = userData.id;
 
         //----------------------------------
-        // 🔥 CALL YOUR PURCHASE API
+        // Call purchase API
         //----------------------------------
 
-        await fetch(`${process.env.BASE_URL}/api/purchase-all`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ discordId })
-        });
+        const roleResponse = await fetch(
+            `${process.env.BASE_URL}/api/purchase-all`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ discordId })
+            }
+        );
+
+        if (!roleResponse.ok) {
+            console.error("ROLE ERROR:", await roleResponse.text());
+
+            return res.writeHead(302, {
+                Location: `${redirectBase}/error`
+            }).end();
+        }
 
         //----------------------------------
-        // Redirect back
+        // SUCCESS
         //----------------------------------
 
         return res.writeHead(302, {
-            Location: `${process.env.SUCCESS_REDIRECT}?success=true`
+            Location: `${redirectBase}/success`
         }).end();
 
     } catch (err) {
-        console.error(err);
-        return res.status(500).send("Server error");
+        console.error("CRASH:", err);
+
+        return res.writeHead(302, {
+            Location: `${redirectBase}/error`
+        }).end();
     }
 }
