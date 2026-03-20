@@ -8,22 +8,6 @@ export default async function handler(req, res) {
         }
 
         //----------------------------------
-        // GET PRODUCT IDS (FIXED)
-        //----------------------------------
-
-        let productIds = url.searchParams.getAll("product_id");
-
-        // fallback for single product
-        if (!productIds || productIds.length === 0) {
-            const single = url.searchParams.get("product_id");
-            if (single) {
-                productIds = [single];
-            }
-        }
-
-        console.log("PRODUCT IDS:", productIds);
-
-        //----------------------------------
         // GET TOKEN
         //----------------------------------
 
@@ -58,7 +42,7 @@ export default async function handler(req, res) {
         }
 
         //----------------------------------
-        // GET USER
+        // GET USER (WITH EMAIL)
         //----------------------------------
 
         const userRes = await fetch("https://discord.com/api/users/@me", {
@@ -82,6 +66,14 @@ export default async function handler(req, res) {
         }
 
         //----------------------------------
+        // CHECK EMAIL
+        //----------------------------------
+
+        if (!user.email) {
+            return res.status(400).send("No email returned from Discord. Make sure email scope is enabled.");
+        }
+
+        //----------------------------------
         // CALL ROLE API
         //----------------------------------
 
@@ -94,8 +86,7 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 discordId: user.id,
-                productIds,
-                accessToken: token.access_token
+                accessToken: token.access_token,
                 email: user.email
             })
         });
@@ -111,7 +102,7 @@ export default async function handler(req, res) {
         // SUCCESS
         //----------------------------------
 
-        return res.send("✅ SUCCESS - Roles assigned!");
+        return res.send("✅ SUCCESS - Secure role sync!");
 
     } catch (err) {
         console.error("CRASH:", err);
